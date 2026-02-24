@@ -1,11 +1,15 @@
 import logging
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters
-from bot.config import BOT_TOKEN
+from bot.config import BOT_TOKEN, DOWNLOAD_PATH
 from bot.handlers import handlers
 from bot.logger import logger
+from bot.utils import cleanup_download_dir
 
 def main():
     logger.info("Starting Video Splitter Bot...")
+
+    # Clean up downloads directory on startup
+    cleanup_download_dir(DOWNLOAD_PATH)
 
     try:
         app = ApplicationBuilder().token(BOT_TOKEN).build()

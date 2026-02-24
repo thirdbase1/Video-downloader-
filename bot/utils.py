@@ -48,6 +48,25 @@ def cleanup_temp_dir(path):
         except Exception as e:
             print(f"Error cleaning up {path}: {e}")
 
+def cleanup_download_dir(download_path):
+    """
+    Cleans up the entire download directory on startup.
+    """
+    if os.path.exists(download_path):
+        try:
+            # Delete all subdirectories (user sessions)
+            for item in os.listdir(download_path):
+                item_path = os.path.join(download_path, item)
+                if os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
+                else:
+                    os.remove(item_path)
+            print(f"Cleaned up download directory: {download_path}")
+        except Exception as e:
+            print(f"Error cleaning up download directory {download_path}: {e}")
+    else:
+        os.makedirs(download_path)
+
 def human_readable_size(size, decimal_places=2):
     """
     Converts bytes to a human readable string (e.g. 50.00 MB).
