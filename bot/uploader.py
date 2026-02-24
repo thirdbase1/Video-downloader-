@@ -41,8 +41,8 @@ class TelegramUploader:
 
         for attempt in range(retries):
             try:
-                # Re-create generator for each attempt
-                async def file_generator():
+                # Use a custom async iterator for streaming with progress
+                async def file_sender():
                     async with aiofiles.open(file_path, 'rb') as f:
                         sent = 0
                         chunk_size = 64 * 1024 # 64KB chunks
@@ -61,13 +61,16 @@ class TelegramUploader:
                 data = aiohttp.FormData()
                 data.add_field('chat_id', str(chat_id))
                 data.add_field('caption', caption)
-                # Important: filename must be set
-                data.add_field('document', file_generator(), filename=filename)
+                # Important: filename must be set.
+                # Use python's built-in file object for simplicity and reliability with aiohttp if possible,
+                # but we want async progress.
+                # aiohttp accepts an async generator if we wrap it properly or just pass it directly in newer versions?
+                # Actually, passing the generator directly works in recent aiohttp versions for streaming uploads.
+                # However, to be safe and explicit, let's just pass the generator.
+
+                data.add_field('document', file_sender(), filename=filename)
 
                 session = await self._get_session()
-
-                # Note: We rely on the session not being closed during upload.
-                # If we use a shared session, we should handle connection errors gracefully.
 
                 async with session.post(url, data=data) as response:
                     if response.status == 200:
@@ -80,8 +83,6 @@ class TelegramUploader:
                     else:
                         text = await response.text()
                         logger.error(f"Upload failed: {response.status} - {text}")
-                        # If session is closed/error, maybe we should refresh it?
-                        # But aiohttp session handles many connections.
                         raise Exception(f"Telegram API Error: {response.status} {text}")
 
             except Exception as e:

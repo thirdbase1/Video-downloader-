@@ -90,6 +90,36 @@ copy /b "Part A.mp4"+"Part B.mp4" "Full Video.mp4"
 **Android:**
 Use a file manager like **MiXplorer** or **Total Commander**. Select all parts -> Long press -> Menu -> Merge/Join.
 
+## Deployment on Termux (Android)
+
+1. **Update and Install System Packages:**
+   ```bash
+   pkg update && pkg upgrade
+   pkg install python ffmpeg rust binutils git
+   ```
+
+2. **Clone and Enter Directory:**
+   ```bash
+   git clone https://github.com/yourusername/video-splitter-bot.git
+   cd video-splitter-bot
+   ```
+
+3. **Setup Environment:**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate
+   pip install -U pip setuptools wheel
+   pip install -r requirements.txt
+   ```
+
+4. **Configure:**
+   Copy `.env.example` to `.env` and edit it with your bot token.
+
+5. **Run:**
+   ```bash
+   python -m bot.main
+   ```
+
 ## Deployment on pxxl.app (or generic Linux VPS)
 
 1. **Ensure requirements are pinned:**
