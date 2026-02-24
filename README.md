@@ -1,104 +1,155 @@
-# Video-downloader-
-Telegram Public Video Splitter Bot
-A Telegram bot built with Python that downloads videos from any URL, splits them into 50 MB chunks, and sends them via the Telegram Bot API.
-🛠 Tools & Libraries
-Component
-Purpose
-python-telegram-bot
-Interact with Telegram Bot API
-yt-dlp
-Extract video formats & metadata
-aiohttp
-Async HTTP requests
-asyncio
-Async task management
-ffmpeg, split
-Video info & binary splitting
-python-dotenv
-Environment variable loading
-logging
-Structured logging for diagnostics
-📦 Installation
-Create and activate a virtual environment:
-Bash
-Copy code
-python3 -m venv venv
-source venv/bin/activate
-Install requirements:
-Bash
-Copy code
-pip install -r requirements.txt
-Create a .env file:
-Bash
-Copy code
-echo "BOT_TOKEN=YOUR_TELEGRAM_BOT_TOKEN" > .env
-echo "DOWNLOAD_PATH=downloads" >> .env
-🔍 How It Works
-User sends any video URL to the bot.
-Bot uses yt-dlp to extract available video formats, estimated sizes, and direct stream URLs.
-Bot replies with resolution choices.
-User selects resolution.
-Bot downloads the video.
-If size > 50 MB, bot splits it into 50 MB binaries.
-Bot sends each part labeled clearly.
-Bot gives user instructions to merge parts locally.
-📋 Supported Sources
-The bot accepts any URL from any platform. yt-dlp supports 1000+ sites out of the box including YouTube, Dailymotion, Vimeo, Twitter/X, Facebook, Instagram, TikTok, Reddit, Twitch, and many more.
-For each platform, the bot must perform deep extraction research to understand:
-How yt-dlp's extractor works for that specific platform (check yt_dlp/extractor/ source per site)
-What format codes are available using:
-yt-dlp --list-formats <url>
-Whether the platform serves HLS, DASH, or direct MP4 and how to handle each
-Any rate limits, geo-restrictions, or header requirements the platform enforces
-Whether cookies or authentication tokens are needed using --cookies-from-browser or --cookies
-How to pass a custom User-Agent or referer header to avoid blocks
-Platform-specific throttling behavior and how yt-dlp works around it
-This deep per-platform research ensures reliable downloads regardless of the source.
-📌 How the Split Works
-For large files: download full video temporarily, split binary file into 50 MB chunks, send each chunk through the Bot API, then delete temp files after sending.
-Command examples:
-Unix:
-Bash
-Copy code
-split -b 50M video.mp4 part_
-Windows:
-Copy code
+# High-Performance Telegram Video Splitter Bot
 
-copy /b part_00+part_01 final.mp4
-☁️ Deployment on pxxl.app
-Create a GitHub repository with your code.
-Ensure .env contains BOT_TOKEN and settings.
-Add a requirements.txt.
-Configure pxxl.app deployment with Python runtime and startup command:
-Copy code
+A production-ready, concurrent Telegram bot built with Python that downloads videos from any URL supported by `yt-dlp`, splits them into 50 MB chunks (Telegram Bot API limit), and sends them to the user. Designed to handle high concurrency (200+ users) with efficient resource management.
 
-python main.py
-Increase disk space if needed.
-Use logging for crash monitoring.
-🛡 Error Handling
-The bot must safely handle:
-Invalid URLs
-Unsupported platforms
-Extraction failures
-Download interruptions
-Splitting errors
-Upload limits
-API timeouts
-Always respond to users with clear error messages.
-📈 Future Improvements
-Caching previously downloaded chunks
-Hosting merged download links
-Cleaner UX with inline keyboards
-Auto-detection and per-platform download strategies
-Cookie management for platforms requiring authentication
-📌 Disclaimer
-This bot is designed for personal and educational use. Always follow the terms of service of the platforms you access.
-📍 Research Guidance
-To make this work reliably, study:
-Telegram Bot API upload limits
-yt-dlp extractors and format selectors per platform
-yt-dlp cookie and header handling
-ffmpeg basics for format info
-Binary splitting and safe concatenation
-Async Python task control
-Deployment environment constraints (memory, disk, timeouts)
+## Features
+
+- **Universal Support**: Downloads videos from YouTube, Dailymotion, Vimeo, Twitter/X, TikTok, Reddit, Twitch, and 1000+ other platforms via `yt-dlp`.
+- **Intelligent Quality Selection**: Extracts available resolutions and lets the user choose via an inline keyboard.
+- **Smart Splitting**: Automatically splits files larger than 50 MB into 50 MB chunks without re-encoding (binary split).
+- **Intelligent Naming**: Chunks are named based on the original video title (e.g., `My Video - Part A.mp4`).
+- **High Concurrency**:
+  - Asynchronous architecture using `asyncio` and `python-telegram-bot`.
+  - ThreadPoolExecutor for blocking I/O (downloading).
+  - Connection pooling for uploads via `aiohttp`.
+  - Concurrent chunk uploads for maximum speed.
+  - Global semaphore to limit active downloads.
+  - Per-user task queue to prevent flooding.
+- **Progress Tracking**: Real-time progress updates for downloading, splitting, and uploading.
+- **Robust Error Handling**: Handles network errors, authentication requirements, and rate limits gracefully.
+
+## Installation
+
+### Prerequisites
+- Python 3.9+
+- FFmpeg (required by `yt-dlp` for some merges, though binary splitting is used primarily)
+
+### Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/video-splitter-bot.git
+   cd video-splitter-bot
+   ```
+
+2. **Create a virtual environment:**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # Linux/macOS
+   # venv\Scripts\activate  # Windows
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configuration:**
+   Copy `.env.example` to `.env` and fill in your details:
+   ```bash
+   cp .env.example .env
+   ```
+
+   Edit `.env`:
+   ```ini
+   BOT_TOKEN=your_telegram_bot_token
+   DOWNLOAD_PATH=downloads
+   MAX_CHUNK_SIZE_MB=50
+   MAX_CONCURRENT_DOWNLOADS=30
+   THREAD_POOL_SIZE=50
+   LOG_FILE=logs/bot.log
+   ```
+
+## Usage
+
+1. **Start the bot:**
+   ```bash
+   python -m bot.main
+   ```
+
+2. **Interact with the bot:**
+   - Send `/start` to get a welcome message.
+   - Send any video URL.
+   - Select the desired quality from the inline buttons.
+   - Wait for the bot to download, split, and send the parts.
+
+## Merging Parts
+
+The bot sends parts named like `Video Title - Part A.mp4`, `Video Title - Part B.mp4`.
+
+**Linux/macOS:**
+```bash
+cat "Video Title - Part A.mp4" "Video Title - Part B.mp4" > "Full Video.mp4"
+```
+
+**Windows CMD:**
+```cmd
+copy /b "Part A.mp4"+"Part B.mp4" "Full Video.mp4"
+```
+
+**Android:**
+Use a file manager like **MiXplorer** or **Total Commander**. Select all parts -> Long press -> Menu -> Merge/Join.
+
+## Deployment on Termux (Android)
+
+1. **Update and Install System Packages:**
+   ```bash
+   pkg update && pkg upgrade
+   pkg install python ffmpeg rust binutils git
+   ```
+
+2. **Clone and Enter Directory:**
+   ```bash
+   git clone https://github.com/yourusername/video-splitter-bot.git
+   cd video-splitter-bot
+   ```
+
+3. **Setup Environment:**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate
+   pip install -U pip setuptools wheel
+   pip install -r requirements.txt
+   ```
+
+4. **Configure:**
+   Copy `.env.example` to `.env` and edit it with your bot token.
+
+5. **Run:**
+   ```bash
+   python -m bot.main
+   ```
+
+## Deployment on pxxl.app (or generic Linux VPS)
+
+1. **Ensure requirements are pinned:**
+   The `requirements.txt` file contains pinned versions for stability.
+
+2. **Environment Variables:**
+   Set the `BOT_TOKEN` and other variables in your hosting provider's dashboard.
+
+3. **Start Command:**
+   ```bash
+   python -m bot.main
+   ```
+
+4. **Disk Space:**
+   Ensure the `DOWNLOAD_PATH` is writable and has sufficient space for temporary files. The bot cleans up files immediately after sending.
+
+## Architecture & Performance
+
+- **Non-Blocking Core**: The bot runs on `asyncio`. Heavy tasks (downloading) are offloaded to a thread pool to avoid blocking the event loop.
+- **Streaming Uploads**: Files are streamed directly from disk to Telegram using `aiohttp` and `aiofiles` to minimize RAM usage.
+- **Connection Pooling**: A shared `aiohttp.ClientSession` is used for uploads to reduce handshake overhead.
+- **Concurrent Uploads**: Multiple chunks of the same video are uploaded in parallel (limited by semaphore) to saturate available bandwidth.
+
+## Troubleshooting
+
+- **"This link requires authentication"**: The bot only supports publicly accessible links. Private videos or those requiring login are rejected for security and technical reasons.
+- **Download Fails**: Check logs (`logs/bot.log`) for details. Common issues include geo-restrictions (try a proxy or VPN on the server) or platform changes (update `yt-dlp`).
+- **Upload Timeout**: If Telegram API is slow, the bot retries with exponential backoff.
+- **Disk Full**: The bot monitors disk usage implicitly. Ensure regular cleanup if the process crashes (auto-cleanup on startup is not implemented, but per-task cleanup is robust).
+
+## License
+
+MIT License
