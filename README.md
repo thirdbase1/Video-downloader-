@@ -136,6 +136,53 @@ Use a file manager like **MiXplorer** or **Total Commander**. Select all parts -
 4. **Disk Space:**
    Ensure the `DOWNLOAD_PATH` is writable and has sufficient space for temporary files. The bot cleans up files immediately after sending.
 
+## Running 24/7 on Server
+
+To keep the bot running continuously on a Linux server, you can use **Docker** or **Systemd**.
+
+### Option 1: Docker (Recommended)
+
+1. **Install Docker and Docker Compose.**
+2. **Configure `.env`** with your bot token.
+3. **Run:**
+   ```bash
+   docker-compose up -d --build
+   ```
+   The bot will restart automatically if the server reboots.
+
+### Option 2: Systemd Service
+
+1. **Edit `video-splitter-bot.service`:**
+   Adjust the paths (`/opt/video-splitter-bot`) to match your installation directory.
+
+2. **Install Service:**
+   ```bash
+   sudo cp video-splitter-bot.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl enable video-splitter-bot
+   sudo systemctl start video-splitter-bot
+   ```
+
+3. **Check Status:**
+   ```bash
+   sudo systemctl status video-splitter-bot
+   ```
+
+## Using a Local Telegram Bot API Server
+
+To bypass the 50 MB upload limit and handle files up to 2000 MB, you can run a local Telegram Bot API server (e.g., via Docker) and configure this bot to use it.
+
+1. **Run Local Bot API Server:**
+   Follow [instructions](https://github.com/tdlib/telegram-bot-api) to run the server on port 8081.
+
+2. **Configure Bot:**
+   Set `TELEGRAM_BASE_URL` in `.env`:
+   ```ini
+   TELEGRAM_BASE_URL=http://localhost:8081/bot
+   ```
+
+   Ensure the bot and the API server can see the same files (or use network upload if they are on different machines).
+
 ## Architecture & Performance
 
 - **Non-Blocking Core**: The bot runs on `asyncio`. Heavy tasks (downloading) are offloaded to a thread pool to avoid blocking the event loop.

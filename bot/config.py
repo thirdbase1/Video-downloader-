@@ -20,6 +20,7 @@ MAX_CONCURRENT_DOWNLOADS = int(get_env_variable("MAX_CONCURRENT_DOWNLOADS", 30))
 THREAD_POOL_SIZE = int(get_env_variable("THREAD_POOL_SIZE", 50))
 LOG_FILE = get_env_variable("LOG_FILE", "logs/bot.log")
 YTDLP_COOKIES_FILE = get_env_variable("YTDLP_COOKIES_FILE", "cookies.txt")
+TELEGRAM_BASE_URL = get_env_variable("TELEGRAM_BASE_URL", "https://api.telegram.org/bot")
 
 # Ensure download directory exists
 if not os.path.exists(DOWNLOAD_PATH):

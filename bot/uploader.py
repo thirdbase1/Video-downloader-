@@ -2,7 +2,7 @@ import os
 import aiohttp
 import asyncio
 import aiofiles
-from .config import BOT_TOKEN
+from .config import BOT_TOKEN, TELEGRAM_BASE_URL
 from .logger import logger
 
 class TelegramUploader:
@@ -28,7 +28,21 @@ class TelegramUploader:
         Uploads a file to Telegram using aiohttp with progress tracking.
         progress_callback: async function(current, total)
         """
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
+        # Ensure base URL ends with 'bot' if it doesn't already?
+        # Typically the base_url for python-telegram-bot is https://api.telegram.org/bot
+        # We assume TELEGRAM_BASE_URL is configured correctly.
+        # But wait, python-telegram-bot constructs urls as base_url + token + /method
+        # So if base_url is https://api.telegram.org/bot, url becomes https://api.telegram.org/bot<TOKEN>/sendDocument
+
+        # However, custom local servers often use http://localhost:8081/bot<TOKEN>/sendDocument
+        # If TELEGRAM_BASE_URL is "https://api.telegram.org/bot", then we just append TOKEN.
+
+        # Let's sanitize/normalize.
+        base = TELEGRAM_BASE_URL
+        if not base.endswith('/'):
+            base += ''
+
+        url = f"{base}{BOT_TOKEN}/sendDocument"
         filename = os.path.basename(file_path)
         try:
             file_size = os.path.getsize(file_path)
