@@ -71,3 +71,29 @@ screen -S bot
 python -m bot.main
 # Press Ctrl+A, then D to detach
 ```
+
+## Deployment on Termux (Android)
+
+1. **Install Packages**:
+   ```bash
+   pkg update && pkg upgrade
+   pkg install python ffmpeg git rust binutils
+   ```
+
+2. **Clone & Setup**:
+   ```bash
+   git clone https://github.com/yourusername/video-splitter-bot.git
+   cd video-splitter-bot
+   python -m venv venv
+   source venv/bin/activate
+   pip install -U pip wheel setuptools
+   pip install -r requirements.txt
+   ```
+
+3. **Configure**:
+   Edit `.env` with your token.
+
+4. **Run**:
+   ```bash
+   python -m bot.main
+   ```
