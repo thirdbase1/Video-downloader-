@@ -1,89 +1,49 @@
 import os
-import aiohttp
 import asyncio
-import aiofiles
-from .config import BOT_TOKEN
 from .logger import logger
 
 class TelegramUploader:
-    def __init__(self):
-        self._session = None
-        self._lock = asyncio.Lock()
-
-    async def _get_session(self):
-        async with self._lock:
-            if self._session is None or self._session.closed:
-                # 50MB upload might take time. 5 mins timeout.
-                timeout = aiohttp.ClientTimeout(total=300, connect=60)
-                self._session = aiohttp.ClientSession(timeout=timeout)
-            return self._session
-
-    async def close(self):
-        async with self._lock:
-            if self._session and not self._session.closed:
-                await self._session.close()
-
-    async def upload_chunk(self, chat_id, file_path, caption, progress_callback=None):
+    async def upload_chunk(self, bot, chat_id, file_path, caption, progress_callback=None):
         """
-        Uploads a file to Telegram using aiohttp with progress tracking.
-        progress_callback: async function(current, total)
+        Uploads a file using the official python-telegram-bot instance.
         """
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
-        filename = os.path.basename(file_path)
-        try:
-            file_size = os.path.getsize(file_path)
-        except OSError:
-            logger.error(f"File not found for upload: {file_path}")
-            return False
-
         retries = 3
         backoff = 2
 
         for attempt in range(retries):
             try:
-                # Use a custom async iterator for streaming with progress
-                async def file_sender():
-                    async with aiofiles.open(file_path, 'rb') as f:
-                        sent = 0
-                        chunk_size = 64 * 1024 # 64KB chunks
-                        while True:
-                            chunk = await f.read(chunk_size)
-                            if not chunk:
-                                break
-                            sent += len(chunk)
-                            if progress_callback:
-                                try:
-                                    await progress_callback(sent, file_size)
-                                except Exception:
-                                    pass
-                            yield chunk
+                # Use standard 'open' and let python-telegram-bot handle it.
+                # This ensures we use all official stuff (httpx underneath).
+                # Progress is sacrificed for simplicity and standard compliance.
 
-                data = aiohttp.FormData()
-                data.add_field('chat_id', str(chat_id))
-                data.add_field('caption', caption)
-                # Important: filename must be set.
-                # Use python's built-in file object for simplicity and reliability with aiohttp if possible,
-                # but we want async progress.
-                # aiohttp accepts an async generator if we wrap it properly or just pass it directly in newer versions?
-                # Actually, passing the generator directly works in recent aiohttp versions for streaming uploads.
-                # However, to be safe and explicit, let's just pass the generator.
+                # We can simulate progress "start" and "end" if needed in the handler.
+                if progress_callback:
+                    try:
+                        # Fake start
+                        file_size = os.path.getsize(file_path)
+                        await progress_callback(0, file_size)
+                    except:
+                        pass
 
-                data.add_field('document', file_sender(), filename=filename)
+                # 5 minute timeout for 50MB is generous.
+                with open(file_path, 'rb') as f:
+                    await bot.send_document(
+                        chat_id=chat_id,
+                        document=f,
+                        caption=caption,
+                        read_timeout=300,
+                        write_timeout=300,
+                        connect_timeout=60
+                    )
 
-                session = await self._get_session()
+                if progress_callback:
+                    try:
+                        # Fake end
+                        await progress_callback(file_size, file_size)
+                    except:
+                        pass
 
-                async with session.post(url, data=data) as response:
-                    if response.status == 200:
-                        return await response.json()
-                    elif response.status == 429:
-                        retry_after = int(response.headers.get("Retry-After", 10))
-                        logger.warning(f"Rate limited. Waiting {retry_after}s.")
-                        await asyncio.sleep(retry_after)
-                        continue # Retry
-                    else:
-                        text = await response.text()
-                        logger.error(f"Upload failed: {response.status} - {text}")
-                        raise Exception(f"Telegram API Error: {response.status} {text}")
+                return True
 
             except Exception as e:
                 logger.warning(f"Upload attempt {attempt+1} failed: {e}")
@@ -91,8 +51,8 @@ class TelegramUploader:
                     await asyncio.sleep(backoff)
                     backoff *= 2
                 else:
+                    # Let the handler deal with final failure
                     raise e
-
         return False
 
 uploader = TelegramUploader()

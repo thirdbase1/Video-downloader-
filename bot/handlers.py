@@ -213,12 +213,16 @@ class BotHandlers:
                     # chunk_name = os.path.basename(chunk_path)
                     caption = f"{title} — Part {current_part} of {total_parts}"
 
+                    # Simulated progress for simple uploader
                     async def chunk_progress(sent, total):
+                        # With standard uploader, we only know start (0%) and end (100%).
+                        # This avoids complex wrappers and "unofficial" hacks.
                         uploaded_bytes_per_chunk[index] = sent
                         total_uploaded = sum(uploaded_bytes_per_chunk)
                         await progress_hook("uploading", total_uploaded, total_size_all)
 
-                    await uploader.upload_chunk(update.effective_chat.id, chunk_path, caption, chunk_progress)
+                    # Pass context.bot
+                    await uploader.upload_chunk(context.bot, update.effective_chat.id, chunk_path, caption, chunk_progress)
 
             for i, chunk_path in enumerate(chunks):
                 upload_tasks.append(asyncio.create_task(upload_worker(i, chunk_path)))
