@@ -9,19 +9,21 @@ class VideoDownloader:
     def __init__(self):
         self.executor = ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE)
 
-    async def download_video(self, url, format_id, output_dir, progress_callback=None):
+    async def download_video(self, url, format_id, output_dir, progress_callback=None, user_context=None):
         """
         Downloads video using yt-dlp in a separate thread.
         progress_callback should be an async function taking (status, percent_str).
+        user_context: dict with 'user_id', 'username' etc. for logging.
         """
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             self.executor,
             self._download_sync,
-            url, format_id, output_dir, progress_callback, loop
+            url, format_id, output_dir, progress_callback, loop, user_context
         )
 
-    def _download_sync(self, url, format_id, output_dir, progress_callback, loop):
+    def _download_sync(self, url, format_id, output_dir, progress_callback, loop, user_context=None):
+        user_context = user_context or {}
         def progress_hook(d):
             if d['status'] == 'downloading':
                 percent_str = d.get('_percent_str', '0%')
@@ -73,7 +75,7 @@ class VideoDownloader:
 
                 return filepath
         except Exception as e:
-            logger.error(f"Download error for {url}: {e}")
+            logger.error(f"Download error for {url}: {e}", extra=user_context)
             raise e
 
 downloader = VideoDownloader()

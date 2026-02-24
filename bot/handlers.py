@@ -134,21 +134,29 @@ class BotHandlers:
         requests = context.user_data.get('requests', {})
         request_data = requests.get(request_id)
 
+        user_id = update.effective_user.id
+        username = update.effective_user.username
+
+        log_ctx = {'user_id': user_id, 'username': username}
+
         if not request_data:
             await status_msg.edit_text("Session expired or invalid. Please send the URL again.")
+            logger.warning(f"Session expired for user {user_id}", extra=log_ctx)
             return
 
         url = request_data['url']
         info = request_data['video_info']
 
+        log_ctx['url'] = url
+
         title = info.get('title', 'Video')
-        user_id = update.effective_user.id
         user_dir = os.path.join(DOWNLOAD_PATH, str(user_id))
 
         if not os.path.exists(user_dir):
             os.makedirs(user_dir)
 
         try:
+            logger.info(f"Starting download process for {url}", extra=log_ctx)
             last_update_time = 0
             current_part = 0
             total_parts = 0
@@ -183,7 +191,7 @@ class BotHandlers:
 
             # Download
             await status_msg.edit_text("Starting download...")
-            file_path = await downloader.download_video(url, format_id, user_dir, progress_hook)
+            file_path = await downloader.download_video(url, format_id, user_dir, progress_hook, user_context=log_ctx)
 
             # Split
             await status_msg.edit_text("Splitting video...")
@@ -244,7 +252,7 @@ class BotHandlers:
                 await status_msg.reply_text(instructions, parse_mode=ParseMode.MARKDOWN)
 
         except Exception as e:
-            logger.error(f"Process failed for user {user_id}: {e}")
+            logger.error(f"Process failed for user {user_id}: {e}", extra=log_ctx)
             await status_msg.edit_text(f"Task failed: {e}")
         finally:
             cleanup_temp_dir(user_dir)
